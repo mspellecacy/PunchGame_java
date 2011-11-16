@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/lib/com.google.ads"
+    android:id="@+id/mainLayout"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:screenOrientation="portrait" >
+	<com.punchedoutgames.PunchGame.Panel
+	    				android:id="@+id/mainPanel"
+    					android:layout_width="fill_parent"
+                        android:layout_height="fill_parent" />
+    <com.google.ads.AdView android:id="@+id/adView"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentTop="true"
+                        ads:adUnitId="a14ebd8dd62489e"
+                        ads:adSize="BANNER"
+                        ads:testDevices="B02E2906917810E767952550CC1D0790"
+                        ads:loadAdOnCreate="true"/>
+</RelativeLayout>
