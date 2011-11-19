@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.os.CountDownTimer;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -15,9 +16,13 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+/**
+ * @author mspellecacy
+ *
+ */
 public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 	private static final String TAG = ViewThread.class.getSimpleName();
-	
+	private static final boolean LOG_VERBOSE = false;
     private static GameTimer gTimer;
     private static Random rand = new Random();
     private ViewThread mMainThread;
@@ -38,6 +43,22 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
     
     //Other Bitmaps
     private Bitmap curState;
+    
+    //screen regions
+    private Rect mUpperLeftRegion;
+    private Rect mUpperRightRegion;
+    private Rect mMiddleLeftRegion;
+    private Rect mMiddleRightRegion;;
+    private Rect mBottomLeftRegion;
+    private Rect mBottomRightRegion;
+    
+    //hit locations
+    private static final int UPPER_LEFT = 0;
+    private static final int UPPER_RIGHT = 1;
+    private static final int MIDDLE_LEFT = 2;
+    private static final int MIDDLE_RIGHT = 3;
+    private static final int BOTTOM_LEFT = 4;
+    private static final int BOTTOM_RIGHT = 5;
     
     Paint paint = new Paint();
 
@@ -109,13 +130,32 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
     public void drawHit(Canvas canvas, int x, int y){
 		int mX = (int) mHitLocation.x-IMPLEMENT_SPRITE.getHeight()/2;
     	int mY = (int) mHitLocation.y-(IMPLEMENT_SPRITE.getWidth()/4)/2;
-    	
+    	int hitRegion = findHitRegion(x,y);
+    	//Log.v(TAG,"Hit Region: "+hitRegion);
     	implement.setX(mX);
     	implement.setY(mY);
     	implement.draw(canvas);
     }
     
-    @Override
+    private int findHitRegion(int x, int y) {
+		if(mUpperLeftRegion.contains(x,y)){
+			return UPPER_LEFT;
+		}else if(mUpperRightRegion.contains(x,y)){
+			return UPPER_RIGHT;
+		}else if(mMiddleLeftRegion.contains(x,y)){
+			return MIDDLE_LEFT;
+		}else if(mMiddleRightRegion.contains(x,y)){
+			return MIDDLE_RIGHT;
+		}else if(mBottomLeftRegion.contains(x,y)){
+			return BOTTOM_LEFT;
+		}else if(mBottomRightRegion.contains(x,y)){
+			return BOTTOM_RIGHT;
+		}else{
+			return -1;
+		}
+	}
+
+	@Override
     public boolean onTouchEvent(MotionEvent event) {
     	
     	mHitLocation.x = event.getX();
@@ -162,6 +202,33 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 	    if (mMainThread.isAlive()) {
 	        mMainThread.setRunning(false);
 	    }
+	}
+	
+	@Override
+	public void onSizeChanged(int w, int h, int oldw, int oldh){
+		//Pull the drawing Rect for doing region calculations
+		Rect cRect = new Rect();
+		getDrawingRect(cRect);
+		
+    	// Calculate out the Rect's for all 6 regions. 
+		mUpperLeftRegion = new Rect(cRect.left, cRect.top, (cRect.right/2), (cRect.bottom/3));
+		mUpperRightRegion = new Rect((mUpperLeftRegion.right+1), cRect.top, cRect.right, (cRect.bottom/3));
+		mMiddleLeftRegion = new Rect(cRect.left, (mUpperLeftRegion.bottom+1), (cRect.right/2), ((cRect.bottom/3)*2));
+		mMiddleRightRegion = new Rect((mMiddleLeftRegion.right+1),(mUpperRightRegion.bottom+1), cRect.right, ((cRect.bottom/3)*2));
+		mBottomLeftRegion = new Rect(cRect.left,(mMiddleLeftRegion.bottom+1),(cRect.right/2),cRect.bottom);
+		mBottomRightRegion = new Rect((mBottomLeftRegion.right+1), (mMiddleRightRegion.bottom+1), cRect.right, cRect.bottom );
+		
+		if(LOG_VERBOSE){
+			Log.v(TAG,"cRect: "+cRect.flattenToString());
+			Log.v(TAG,"mUpperLeftRegion: "+mUpperLeftRegion.flattenToString());
+			Log.v(TAG,"mUpperRightRegion: "+mUpperRightRegion.flattenToString());
+			Log.v(TAG,"+mMiddleLeftRegion: "+mMiddleLeftRegion.flattenToString());
+			Log.v(TAG,"mMiddleRightRegion: "+mMiddleRightRegion.flattenToString());
+			Log.v(TAG,"mBottomLeftRegion: "+mBottomLeftRegion.flattenToString());
+			Log.v(TAG,"mBottomRightRegion: "+mBottomRightRegion.flattenToString());
+		}
+		
+		Log.v(TAG,"onSizeChanged(): "+cRect.flattenToString());
 	}
 	
 	public class GameTimer extends CountDownTimer{

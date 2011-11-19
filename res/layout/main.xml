@@ -16,6 +16,6 @@
                         android:layout_alignParentTop="true"
                         ads:adUnitId="a14ebd8dd62489e"
                         ads:adSize="BANNER"
-                        ads:testDevices="B02E2906917810E767952550CC1D0790"
+                        ads:testDevices="TEST_EMULATOR,B02E2906917810E767952550CC1D0790"
                         ads:loadAdOnCreate="true"/>
 </RelativeLayout>
