@@ -1,5 +1,7 @@
 package com.punchedoutgames.PunchGame;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import android.content.Context;
@@ -26,6 +28,8 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
     private static GameTimer gTimer;
     private static Random rand = new Random();
     private ViewThread mMainThread;
+    private HashMap<Integer,Point> points = new HashMap<Integer,Point>(); 
+	private int touchCount = 0;
     
     //0 = normal; 1 = hurt; 2 = very hurt; 3 = dead
     private int HIT_STATUS = 0;
@@ -39,7 +43,7 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
     
     //Animations Stuff
     private final Bitmap IMPLEMENT_SPRITE = BitmapFactory.decodeResource(getResources(), R.drawable.hit_implement);
-    private ImplementAnimator implement;
+    private ImplementAnimator hitImplement;
     
     //Other Bitmaps
     private Bitmap curState;
@@ -98,7 +102,7 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
         mSoundManager.addSound(6, R.raw.hit_response3);
         
         //setup implement animation
-        implement = new ImplementAnimator(
+        hitImplement = new ImplementAnimator(
         		IMPLEMENT_SPRITE,
         		1, 1,
         		104, 150,
@@ -122,19 +126,18 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
         
         canvas.drawBitmap(curState, null, canvas.getClipBounds(), paint);
         
-    	if(mHitLocation.x!=0 & mHitLocation.y!=0){
-    		drawHit(canvas, (int) mHitLocation.x, (int) mHitLocation.y);
+    	if(mHitLocation.getX()!=0 & mHitLocation.getY()!=0){
+    		drawHit(canvas, (int) mHitLocation.getX(), (int) mHitLocation.getY());
     	}
     }
     
     public void drawHit(Canvas canvas, int x, int y){
-		int mX = (int) mHitLocation.x-IMPLEMENT_SPRITE.getHeight()/2;
-    	int mY = (int) mHitLocation.y-(IMPLEMENT_SPRITE.getWidth()/4)/2;
-    	int hitRegion = findHitRegion(x,y);
-    	//Log.v(TAG,"Hit Region: "+hitRegion);
-    	implement.setX(mX);
-    	implement.setY(mY);
-    	implement.draw(canvas);
+		int mX = (int) mHitLocation.getX()-IMPLEMENT_SPRITE.getHeight()/2;
+    	int mY = (int) mHitLocation.getY()-(IMPLEMENT_SPRITE.getWidth()/4)/2;
+    	Log.v(TAG,"Hit Region: "+findHitRegion(x,y));
+    	hitImplement.setX(mX);
+    	hitImplement.setY(mY);
+    	hitImplement.draw(canvas);
     }
     
     private int findHitRegion(int x, int y) {
@@ -157,36 +160,52 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 
 	@Override
     public boolean onTouchEvent(MotionEvent event) {
-    	
-    	mHitLocation.x = event.getX();
-    	mHitLocation.y = event.getY();
-    	
-        if(event.getAction() != MotionEvent.ACTION_DOWN)
-        {
-        	return super.onTouchEvent(event);
-        }
-        
-        mSoundManager.playSound(rand.nextInt(2)+1);
-    	if(HIT_STATUS==0){
-    		mSoundManager.playSound(rand.nextInt(2)+4);
-        	gTimer = new GameTimer(2000,1);
-        	gTimer.start();
-    	}
-    	HIT_STATUS = 1;
-    	invalidate();
-    	//reset the animations before drawing...
-    	implement.setCurrentLoop(0);
-    	implement.setCurrentFrame(0);
-    	return super.onTouchEvent(event);
+
+		switch(event.getAction()) {
+			case MotionEvent.ACTION_DOWN:
+				mHitLocation.setX(event.getX());
+				mHitLocation.setY(event.getY());
+			    mSoundManager.playSound(rand.nextInt(2)+1);
+				if(HIT_STATUS==0){
+					mSoundManager.playSound(rand.nextInt(2)+4);
+			    	gTimer = new GameTimer(2000,1);
+			    	gTimer.start();
+				}
+				HIT_STATUS = 1;
+				invalidate();
+				//reset the animations before drawing...
+				hitImplement.setCurrentLoop(0);
+				hitImplement.setCurrentFrame(0);
+				break;
+				
+			case MotionEvent.ACTION_MOVE:
+				Log.v(TAG,"Hi Move!");
+				points.put(touchCount, new Point(event.getX(), event.getY()));
+				touchCount++;
+				break;
+				
+			case MotionEvent.ACTION_UP:
+				Log.v(TAG,""+points.size());
+				for(Map.Entry<Integer, Point> entry : points.entrySet() ){
+					Log.v(TAG,entry.getKey()+":"+entry.getValue().toString());
+				}
+				Log.v(TAG,"Hi!");
+				points.clear();
+				touchCount=0;
+				break;
+				
+		}
+		
+		return true;
+		//return super.onTouchEvent(event);
     }
 
 	public void update() {
-		implement.update(System.currentTimeMillis());
+		hitImplement.update(System.currentTimeMillis());
 	}
 
 	@Override
-	public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-	}
+	public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
@@ -241,8 +260,8 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 		public void onFinish() {
 			// Zero out all the variables to reset it back to 'DOLL_NORM'
 			HIT_STATUS = 0;
-			mHitLocation.x = 0;
-			mHitLocation.y = 0;
+			mHitLocation.setX(0);
+			mHitLocation.setY(0);
 		}
 
 		@Override
@@ -251,11 +270,3 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 	}
 }
 
-class Point {
-    float x, y;
-
-    @Override
-    public String toString() {
-        return x + ", " + y;
-    }
-}
