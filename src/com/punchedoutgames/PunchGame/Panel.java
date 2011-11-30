@@ -1,7 +1,6 @@
 package com.punchedoutgames.PunchGame;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
 import android.content.Context;
@@ -133,11 +132,12 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
     
     public void drawHit(Canvas canvas, int x, int y){
 		int mX = (int) mHitLocation.getX()-IMPLEMENT_SPRITE.getHeight()/2;
-    	int mY = (int) mHitLocation.getY()-(IMPLEMENT_SPRITE.getWidth()/4)/2;
-    	Log.v(TAG,"Hit Region: "+findHitRegion(x,y));
+    	int mY = (int) mHitLocation.getY()-(IMPLEMENT_SPRITE.getWidth()/4)/2;        
     	hitImplement.setX(mX);
     	hitImplement.setY(mY);
     	hitImplement.draw(canvas);
+    	
+
     }
     
     private int findHitRegion(int x, int y) {
@@ -186,10 +186,6 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 				
 			case MotionEvent.ACTION_UP:
 				Log.v(TAG,""+points.size());
-				for(Map.Entry<Integer, Point> entry : points.entrySet() ){
-					Log.v(TAG,entry.getKey()+":"+entry.getValue().toString());
-				}
-				Log.v(TAG,"Hi!");
 				points.clear();
 				touchCount=0;
 				break;
