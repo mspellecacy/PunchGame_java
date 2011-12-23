@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="Account Information"
+        android:key="accountInfo">
+        
+        <EditTextPreference 
+			android:title="Username"
+			android:key="username"
+			android:summary="Your Account Username"
+			android:defaultValue="changeMe" />
+        
+        <EditTextPreference
+            android:title="Password"
+            android:key="password"
+            android:summary="Your Account Password"
+            android:inputType="textPassword" 
+            android:defaultValue="changeMeToo" />
+            
+    </PreferenceCategory>
+</PreferenceScreen>

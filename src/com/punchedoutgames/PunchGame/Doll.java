@@ -1,5 +1,6 @@
 package com.punchedoutgames.PunchGame;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -19,7 +20,7 @@ public class Doll {
    // private final Bitmap DOLL_HURT = BitmapFactory.decodeResource(getResources(), R.drawable.doll_hurt);
    // private final Bitmap DOLL_NORM = BitmapFactory.decodeResource(getResources(), R.drawable.doll_norm);
 	
-	public void Doll(Bitmap dollBaseImage){
+	public Doll(Context context){
 		this.dollBaseImage = dollBaseImage;
 		dollRect = new Rect(0,0,dollBaseImage.getWidth(),dollBaseImage.getHeight());
 		dollPaint = new Paint();

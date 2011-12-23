@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Random;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -11,6 +12,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.CountDownTimer;
+import android.preference.PreferenceManager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -24,123 +26,129 @@ import android.view.SurfaceView;
 public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 	private static final String TAG = ViewThread.class.getSimpleName();
 	private static final boolean LOG_VERBOSE = false;
-    private static GameTimer gTimer;
-    private static Random rand = new Random();
-    private ViewThread mMainThread;
-    private HashMap<Integer,Point> points = new HashMap<Integer,Point>(); 
+	private static GameTimer gTimer;
+	private static Random rand = new Random();
+	private ViewThread mMainThread;
+	private HashMap<Integer,Point> points = new HashMap<Integer,Point>(); 
 	private int touchCount = 0;
-    
-    //0 = normal; 1 = hurt; 2 = very hurt; 3 = dead
-    private int HIT_STATUS = 0;
-    private Point mHitLocation = new Point();
-    private SoundManager mSoundManager = new SoundManager();
-    
-    //Since most of the images are static just preemptively load them. (yet I can't declare them static..)
-    private final Bitmap BACKGROUND = BitmapFactory.decodeResource(getResources(), R.drawable.background);
-    private final Bitmap DOLL_HURT = BitmapFactory.decodeResource(getResources(), R.drawable.doll_hurt);
-    private final Bitmap DOLL_NORM = BitmapFactory.decodeResource(getResources(), R.drawable.doll_norm);
-    
-    //Animations Stuff
-    private final Bitmap IMPLEMENT_SPRITE = BitmapFactory.decodeResource(getResources(), R.drawable.hit_implement);
-    private ImplementAnimator hitImplement;
-    
-    //Other Bitmaps
-    private Bitmap curState;
-    
-    //screen regions
-    private Rect mUpperLeftRegion;
-    private Rect mUpperRightRegion;
-    private Rect mMiddleLeftRegion;
-    private Rect mMiddleRightRegion;;
-    private Rect mBottomLeftRegion;
-    private Rect mBottomRightRegion;
-    
-    //hit locations
-    private static final int UPPER_LEFT = 0;
-    private static final int UPPER_RIGHT = 1;
-    private static final int MIDDLE_LEFT = 2;
-    private static final int MIDDLE_RIGHT = 3;
-    private static final int BOTTOM_LEFT = 4;
-    private static final int BOTTOM_RIGHT = 5;
-    
-    Paint paint = new Paint();
+	private static SharedPreferences preferences;
 
-    public Panel(Context context) {
-        super(context);
-        init();
-    }
+	private Doll doll;
+	
+	//0 = normal; 1 = hurt; 2 = very hurt; 3 = dead
+	private int HIT_STATUS = 0;
+	private Point mHitLocation = new Point();
+	private SoundManager mSoundManager = new SoundManager();
 
-    public Panel(Context context, AttributeSet attrs) {
-    	  super(context, attrs);
-    	  init();
-    }
-    
-    public Panel(Context context, AttributeSet attrs, int defStyle) {
-    	  super(context, attrs, defStyle);
-    	  init();
-    }
-    
-    private void init(){
-        getHolder().addCallback(this);
-        mMainThread = new ViewThread(getHolder(), this);
-        setFocusable(true);
-        setFocusableInTouchMode(true);
-        setDrawingCacheEnabled(true);
-        setDrawingCacheQuality(DRAWING_CACHE_QUALITY_HIGH);
-        
-        paint.setColor(Color.BLACK);
-        paint.setAntiAlias(true);
-        
-        //load up the sounds...
-        mSoundManager.initSounds(getContext());
-        mSoundManager.addSound(1, R.raw.hit_sound1);
-        mSoundManager.addSound(2, R.raw.hit_sound2);
-        mSoundManager.addSound(3, R.raw.hit_sound3);
-        mSoundManager.addSound(4, R.raw.hit_response1);
-        mSoundManager.addSound(5, R.raw.hit_response2);
-        mSoundManager.addSound(6, R.raw.hit_response3);
-        
-        //setup implement animation
-        hitImplement = new ImplementAnimator(
-        		IMPLEMENT_SPRITE,
-        		1, 1,
-        		104, 150,
-        		2, 4);
-        
+	//Since most of the images are static just preemptively load them. (yet I can't declare them static..)
+	private final Bitmap BACKGROUND = BitmapFactory.decodeResource(getResources(), R.drawable.background);
+	private final Bitmap DOLL_HURT = BitmapFactory.decodeResource(getResources(), R.drawable.doll_hurt);
+	private final Bitmap DOLL_NORM = BitmapFactory.decodeResource(getResources(), R.drawable.doll_norm);
 
-        Log.v(TAG,"DrawView Started");
-    }
-    public void doDraw(Canvas canvas) {
-        
-        canvas.drawBitmap(BACKGROUND, null, canvas.getClipBounds(), paint);
-        //0 = normal; 1 = hurt; 2 = very hurt; 3 = dead
-        switch(HIT_STATUS){
-        	case 0: 
-        		curState = DOLL_NORM;
-        		break;
-        	case 1:
-        		curState = DOLL_HURT; 
-        		break;
-        }
-        
-        canvas.drawBitmap(curState, null, canvas.getClipBounds(), paint);
-        
-    	if(mHitLocation.getX()!=0 & mHitLocation.getY()!=0){
-    		drawHit(canvas, (int) mHitLocation.getX(), (int) mHitLocation.getY());
-    	}
-    }
-    
-    public void drawHit(Canvas canvas, int x, int y){
+	//Animations Stuff
+	private final Bitmap IMPLEMENT_SPRITE = BitmapFactory.decodeResource(getResources(), R.drawable.hit_implement);
+	private ImplementAnimator hitImplement;
+
+	//Other Bitmaps
+	private Bitmap curState;
+
+	//screen regions
+	private Rect mUpperLeftRegion;
+	private Rect mUpperRightRegion;
+	private Rect mMiddleLeftRegion;
+	private Rect mMiddleRightRegion;;
+	private Rect mBottomLeftRegion;
+	private Rect mBottomRightRegion;
+
+	//hit locations
+	private static final int UPPER_LEFT = 0;
+	private static final int UPPER_RIGHT = 1;
+	private static final int MIDDLE_LEFT = 2;
+	private static final int MIDDLE_RIGHT = 3;
+	private static final int BOTTOM_LEFT = 4;
+	private static final int BOTTOM_RIGHT = 5;
+
+	Paint paint = new Paint();
+
+	public Panel(Context context) {
+		super(context);
+		init();
+	}
+
+	public Panel(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		init();
+	}
+
+	public Panel(Context context, AttributeSet attrs, int defStyle) {
+		super(context, attrs, defStyle);   	  
+		init();
+	}
+
+	private void init(){
+
+		//Basic canvas housekeeping
+		getHolder().addCallback(this);
+		mMainThread = new ViewThread(getHolder(), this);
+		setFocusable(true);
+		setFocusableInTouchMode(true);
+		setDrawingCacheEnabled(true);
+		setDrawingCacheQuality(DRAWING_CACHE_QUALITY_HIGH);
+		paint.setColor(Color.BLACK);
+		paint.setAntiAlias(true);
+
+		//Setup preferences
+		preferences = PreferenceManager.getDefaultSharedPreferences(getContext());
+
+		//load up the sounds...
+		mSoundManager.initSounds(getContext());
+		mSoundManager.addSound(1, R.raw.hit_sound1);
+		mSoundManager.addSound(2, R.raw.hit_sound2);
+		mSoundManager.addSound(3, R.raw.hit_sound3);
+		mSoundManager.addSound(4, R.raw.hit_response1);
+		mSoundManager.addSound(5, R.raw.hit_response2);
+		mSoundManager.addSound(6, R.raw.hit_response3);
+
+		//setup implement animation
+		hitImplement = new ImplementAnimator(IMPLEMENT_SPRITE,1, 1,104, 150,2, 4);
+
+		//setup the doll
+		doll = new Doll(getContext());
+		
+		// Do some basic logging
+		Log.v(TAG,"init()'d");
+	}
+	public void doDraw(Canvas canvas) {
+
+		canvas.drawBitmap(BACKGROUND, null, canvas.getClipBounds(), paint);
+		//0 = normal; 1 = hurt; 2 = very hurt; 3 = dead
+		switch(HIT_STATUS){
+		case 0: 
+			curState = DOLL_NORM;
+			break;
+		case 1:
+			curState = DOLL_HURT; 
+			break;
+		}
+
+		canvas.drawBitmap(curState, null, canvas.getClipBounds(), paint);
+
+		if(mHitLocation.getX()!=0 & mHitLocation.getY()!=0){
+			drawHit(canvas, (int) mHitLocation.getX(), (int) mHitLocation.getY());
+		}
+	}
+
+	public void drawHit(Canvas canvas, int x, int y){
 		int mX = (int) mHitLocation.getX()-IMPLEMENT_SPRITE.getHeight()/2;
-    	int mY = (int) mHitLocation.getY()-(IMPLEMENT_SPRITE.getWidth()/4)/2;        
-    	hitImplement.setX(mX);
-    	hitImplement.setY(mY);
-    	hitImplement.draw(canvas);
-    	
+		int mY = (int) mHitLocation.getY()-(IMPLEMENT_SPRITE.getWidth()/4)/2;        
+		hitImplement.setX(mX);
+		hitImplement.setY(mY);
+		hitImplement.draw(canvas);
 
-    }
-    
-    private int findHitRegion(int x, int y) {
+
+	}
+
+	private int findHitRegion(int x, int y) {
 		if(mUpperLeftRegion.contains(x,y)){
 			return UPPER_LEFT;
 		}else if(mUpperRightRegion.contains(x,y)){
@@ -159,42 +167,41 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 	}
 
 	@Override
-    public boolean onTouchEvent(MotionEvent event) {
+	public boolean onTouchEvent(MotionEvent event) {
 
 		switch(event.getAction()) {
-			case MotionEvent.ACTION_DOWN:
-				mHitLocation.setX(event.getX());
-				mHitLocation.setY(event.getY());
-			    mSoundManager.playSound(rand.nextInt(2)+1);
-				if(HIT_STATUS==0){
-					mSoundManager.playSound(rand.nextInt(2)+4);
-			    	gTimer = new GameTimer(2000,1);
-			    	gTimer.start();
-				}
-				HIT_STATUS = 1;
-				invalidate();
-				//reset the animations before drawing...
-				hitImplement.setCurrentLoop(0);
-				hitImplement.setCurrentFrame(0);
-				break;
-				
-			case MotionEvent.ACTION_MOVE:
-				Log.v(TAG,"Hi Move!");
-				points.put(touchCount, new Point(event.getX(), event.getY()));
-				touchCount++;
-				break;
-				
-			case MotionEvent.ACTION_UP:
-				Log.v(TAG,""+points.size());
-				points.clear();
-				touchCount=0;
-				break;
-				
+		case MotionEvent.ACTION_DOWN:
+			mHitLocation.setX(event.getX());
+			mHitLocation.setY(event.getY());
+			mSoundManager.playSound(rand.nextInt(2)+1);
+			if(HIT_STATUS==0){
+				mSoundManager.playSound(rand.nextInt(2)+4);
+				gTimer = new GameTimer(2000,1);
+				gTimer.start();
+			}
+			HIT_STATUS = 1;
+			invalidate();
+			//reset the animations before drawing...
+			hitImplement.setCurrentLoop(0);
+			hitImplement.setCurrentFrame(0);
+			break;
+
+		case MotionEvent.ACTION_MOVE:
+			points.put(touchCount, new Point(event.getX(), event.getY()));
+			touchCount++;
+			break;
+
+		case MotionEvent.ACTION_UP:
+			Log.v(TAG,""+points.size());
+			points.clear();
+			touchCount=0;
+			break;
+
 		}
-		
+
 		return true;
 		//return super.onTouchEvent(event);
-    }
+	}
 
 	public void update() {
 		hitImplement.update(System.currentTimeMillis());
@@ -206,33 +213,33 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
 		if (!mMainThread.isAlive()) {
-	        mMainThread = new ViewThread(holder, this);
-	        mMainThread.setRunning(true);
-	        mMainThread.start();
-	    }
+			mMainThread = new ViewThread(holder, this);
+			mMainThread.setRunning(true);
+			mMainThread.start();
+		}
 	}
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
-	    if (mMainThread.isAlive()) {
-	        mMainThread.setRunning(false);
-	    }
+		if (mMainThread.isAlive()) {
+			mMainThread.setRunning(false);
+		}
 	}
-	
+
 	@Override
 	public void onSizeChanged(int w, int h, int oldw, int oldh){
 		//Pull the drawing Rect for doing region calculations
 		Rect cRect = new Rect();
 		getDrawingRect(cRect);
-		
-    	// Calculate out the Rect's for all 6 regions. 
+
+		// Calculate out the Rect's for all 6 regions. 
 		mUpperLeftRegion = new Rect(cRect.left, cRect.top, (cRect.right/2), (cRect.bottom/3));
 		mUpperRightRegion = new Rect((mUpperLeftRegion.right+1), cRect.top, cRect.right, (cRect.bottom/3));
 		mMiddleLeftRegion = new Rect(cRect.left, (mUpperLeftRegion.bottom+1), (cRect.right/2), ((cRect.bottom/3)*2));
 		mMiddleRightRegion = new Rect((mMiddleLeftRegion.right+1),(mUpperRightRegion.bottom+1), cRect.right, ((cRect.bottom/3)*2));
 		mBottomLeftRegion = new Rect(cRect.left,(mMiddleLeftRegion.bottom+1),(cRect.right/2),cRect.bottom);
 		mBottomRightRegion = new Rect((mBottomLeftRegion.right+1), (mMiddleRightRegion.bottom+1), cRect.right, cRect.bottom );
-		
+
 		if(LOG_VERBOSE){
 			Log.v(TAG,"cRect: "+cRect.flattenToString());
 			Log.v(TAG,"mUpperLeftRegion: "+mUpperLeftRegion.flattenToString());
@@ -242,12 +249,12 @@ public class Panel extends SurfaceView implements SurfaceHolder.Callback {
 			Log.v(TAG,"mBottomLeftRegion: "+mBottomLeftRegion.flattenToString());
 			Log.v(TAG,"mBottomRightRegion: "+mBottomRightRegion.flattenToString());
 		}
-		
+
 		Log.v(TAG,"onSizeChanged(): "+cRect.flattenToString());
 	}
-	
+
 	public class GameTimer extends CountDownTimer{
-		
+
 		public GameTimer(long millisInFuture, long countDownInterval) {
 			super(millisInFuture, countDownInterval);
 		}
